@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox User ID Tester</title>
+<style>
+body { font-family: sans-serif; margin: 2rem; }
+input, button { padding: 0.5rem; font-size: 1rem; margin-bottom: 0.5rem; }
+#result { margin-top: 1rem; font-weight: bold; }
+.setup-section { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>Roblox User ID Finder</h1>
+<input type="text" id="username" placeholder="Enter Roblox Username">
+<button onclick="testUser()">Get ID</button>
+
+<div id="result"></div>
+
+<div class="setup-section">
+<h3>First Time User?</h3>
+<p>If you get a CORS error, you must authorize your IP address with the proxy service first.</p>
+<button onclick="window.open('https://cors-anywhere.herokuapp.com/corsdemo', '_blank')">
+Request CORS-Anywhere Access
+</button>
+</div>
+
+<script>
+async function getUserID(name) {
+// Using the cors-anywhere proxy
+const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+const targetUrl = `https://www.roblox.com/users/profile?username=${name}`;
+
+const response = await fetch(proxyUrl + targetUrl);
+
+if (!response.ok) throw new Error("CORS access might not be enabled or user not found.");
+
+// Extract ID from the final URL after redirect
+const id = response.url.match(/\d+/)[0];
+return id;
+}
+
+async function testUser() {
+const name = document.getElementById('username').value;
+const resultDiv = document.getElementById('result');
+
+if (!name) {
+resultDiv.textContent = "Please enter a username.";
+return;
+}
+
+resultDiv.textContent = "Loading...";
+
+try {
+const id = await getUserID(name);
+resultDiv.textContent = `User ID: ${id}`;
+} catch (error) {
+resultDiv.textContent = "Error: Could not retrieve ID. Ensure you have requested access via the button below.";
+console.error(error);
+}
+}
+</script>
+
+</body>
+</html>

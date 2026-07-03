@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox User ID Tester (Hyra + CORS Fix)</title>
+    <title>Roblox User ID Tester (Hyra + Stable CORS Fix)</title>
     <style>
         body { font-family: sans-serif; margin: 2rem; max-width: 600px; }
         input, button { padding: 0.5rem; font-size: 1rem; margin-bottom: 0.5rem; border-radius: 4px; border: 1px solid #ccc; }
@@ -28,14 +28,6 @@
     </div>
 
     <div class="setup-section">
-        <h3>Proxy Authorization Required</h3>
-        <p>Because Hyra restricts browser-side requests, you must unlock temporary demo access to bypass the CORS restriction:</p>
-        <button onclick="window.open('https://cors-anywhere.herokuapp.com/corsdemo', '_blank')">
-            Request CORS-Anywhere Access
-        </button>
-    </div>
-
-    <div class="setup-section">
         <h3>Developer Export</h3>
         <p>Need the clean fetch code for your secure backend (Node.js/Python) where CORS limitations don't apply?</p>
         <button class="action-btn" id="copyCodeBtn" onclick="copyCleanCode()">Copy Clean JS Code</button>
@@ -44,7 +36,7 @@
     <script>
         let currentUserId = "";
 
-        // Clean code snippet for backend environments (where CORS isn't an issue)
+        // Clean code snippet for backend environments
         const cleanJavaScriptCode = `async function getUserID(name) {
     const targetUrl = \`https://api.hyra.io/users/roblox?username=\${encodeURIComponent(name.trim())}\`;
     const response = await fetch(targetUrl, {
@@ -58,33 +50,28 @@
     return data.id;
 }`;
 
-        // Browser function using the proxy wrapper
+        // Browser function using the stable corsproxy.io wrapper
         async function getUserID(name) {
-            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            // Using corsproxy.io which handles Cloudflare routing significantly better
+            const proxyUrl = 'https://corsproxy.io/?';
             const targetUrl = `https://api.hyra.io/users/roblox?username=${encodeURIComponent(name.trim())}`;
             
-            const response = await fetch(proxyUrl + targetUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+                method: 'GET'
             });
             
             if (!response.ok) {
-                if (response.status === 403) {
-                    throw new Error("CORS Proxy access not unlocked. Please click the button below to authorize.");
-                }
                 if (response.status === 404) {
                     throw new Error("User not found on Roblox.");
                 }
-                throw new Error(`API Error (Status: ${response.status}).`);
+                throw new Error(`Proxy/API Error (Status: ${response.status}).`);
             }
             
             const data = await response.json();
             
+            // Validate that the ID key exists in Hyra's straight object response
             if (!data || !data.id) {
-                throw new Error("User not found. Check the spelling of the username.");
+                throw new Error("User data invalid or user not found.");
             }
             
             return data.id;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox User ID Tester (Hyra API)</title>
+    <title>Roblox User ID Tester (Hyra + CORS Fix)</title>
     <style>
         body { font-family: sans-serif; margin: 2rem; max-width: 600px; }
         input, button { padding: 0.5rem; font-size: 1rem; margin-bottom: 0.5rem; border-radius: 4px; border: 1px solid #ccc; }
@@ -14,14 +14,11 @@
         #result-container { margin-top: 1rem; font-weight: bold; display: flex; align-items: center; gap: 10px; }
         .copy-btn { padding: 0.3rem 0.6rem; font-size: 0.85rem; display: none; }
         .setup-section { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }
-        .info-badge { background-color: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem; }
     </style>
 </head>
 <body>
 
     <h1>Roblox User ID Finder</h1>
-    <span class="info-badge">Powered by Hyra API</span>
-    <br>
     <input type="text" id="username" placeholder="Enter Roblox Username">
     <button class="action-btn" onclick="testUser()">Get ID</button>
 
@@ -31,27 +28,28 @@
     </div>
 
     <div class="setup-section">
-        <h3>API Connectivity Status</h3>
-        <p><strong>Direct Browser Support:</strong> Unlike native Roblox endpoints, Hyra's public API safely permits client-side browser requests (CORS). No intermediate proxy authorization is needed.</p>
+        <h3>Proxy Authorization Required</h3>
+        <p>Because Hyra restricts browser-side requests, you must unlock temporary demo access to bypass the CORS restriction:</p>
+        <button onclick="window.open('https://cors-anywhere.herokuapp.com/corsdemo', '_blank')">
+            Request CORS-Anywhere Access
+        </button>
     </div>
 
     <div class="setup-section">
         <h3>Developer Export</h3>
-        <p>Need the clean fetch block to embed directly into your own scripts or projects?</p>
+        <p>Need the clean fetch code for your secure backend (Node.js/Python) where CORS limitations don't apply?</p>
         <button class="action-btn" id="copyCodeBtn" onclick="copyCleanCode()">Copy Clean JS Code</button>
     </div>
 
     <script>
         let currentUserId = "";
 
-        // Modern, lightweight JS fetch code snippet matching Hyra's syntax
+        // Clean code snippet for backend environments (where CORS isn't an issue)
         const cleanJavaScriptCode = `async function getUserID(name) {
     const targetUrl = \`https://api.hyra.io/users/roblox?username=\${encodeURIComponent(name.trim())}\`;
     const response = await fetch(targetUrl, {
         method: 'GET',
-        headers: {
-            'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
     });
     
     if (!response.ok) throw new Error("Network error fetching user data.");
@@ -60,26 +58,31 @@
     return data.id;
 }`;
 
+        // Browser function using the proxy wrapper
         async function getUserID(name) {
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
             const targetUrl = `https://api.hyra.io/users/roblox?username=${encodeURIComponent(name.trim())}`;
             
-            const response = await fetch(targetUrl, {
+            const response = await fetch(proxyUrl + targetUrl, {
                 method: 'GET',
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
             
             if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error("CORS Proxy access not unlocked. Please click the button below to authorize.");
+                }
                 if (response.status === 404) {
-                    throw new Error("User not found. Check the spelling of the username.");
+                    throw new Error("User not found on Roblox.");
                 }
                 throw new Error(`API Error (Status: ${response.status}).`);
             }
             
             const data = await response.json();
             
-            // Hyra responds directly with an object: { id: "...", username: "...", display_name: "..." }
             if (!data || !data.id) {
                 throw new Error("User not found. Check the spelling of the username.");
             }
@@ -92,7 +95,7 @@
             const resultDiv = document.getElementById('result');
             const copyIdBtn = document.getElementById('copyIdBtn');
             
-            // Reset state
+            // Reset UI state
             currentUserId = "";
             copyIdBtn.style.display = "none";
             copyIdBtn.textContent = "Copy ID";
@@ -115,7 +118,6 @@
             }
         }
 
-        // Copies the retrieved User ID to your clipboard
         function copyIdToClipboard() {
             if (!currentUserId) return;
             navigator.clipboard.writeText(currentUserId).then(() => {
@@ -125,8 +127,7 @@
             });
         }
 
-        // Copies the standalone utility code snippet to your clipboard
-        function copyCleanCode() {
+        document.getElementById('copyCodeBtn').onclick = function() {
             navigator.clipboard.writeText(cleanJavaScriptCode).then(() => {
                 const btn = document.getElementById('copyCodeBtn');
                 btn.textContent = "Code Copied!";

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Roblox User ID Tester</title>
+    <title>Ultimate Roblox User ID Tester (Restricted Proxies)</title>
     <style>
         body { font-family: sans-serif; margin: 2rem; max-width: 600px; line-height: 1.4; }
         .form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.25rem; }
@@ -27,19 +27,15 @@
     <div class="form-group">
         <label for="apiSelect">Target API Endpoint</label>
         <select id="apiSelect" onchange="updateProxyOptions()">
-            <option value="hyra">Hyra API (GET Request - Cleaner Object JSON)</option>
-            <option value="roblox">Roblox Native API (POST Request - Nested Array JSON)</option>
+            <option value="hyra">Hyra API (GET Request)</option>
+            <option value="roblox">Roblox Native API (POST Request)</option>
         </select>
     </div>
 
     <div class="form-group">
         <label for="proxySelect">CORS Proxy Layer</label>
         <select id="proxySelect" onchange="toggleProxyNotice()">
-            <option value="corsproxy">corsproxy.io (Highly Stable URL Parameter Wrapper)</option>
-            <option value="allorigins">api.allorigins.win (Raw Parsing Mode Wrapper)</option>
-            <option value="corsanywhere">cors-anywhere.herokuapp.com (Requires Manual Activation)</option>
-            <option value="none">None / Direct Connection (Will fail in production browsers)</option>
-        </select>
+            </select>
         <div id="corsAnywhereNote" class="note">
             ⚠️ <strong>Notice:</strong> If using cors-anywhere, make sure you have requested temporary access by opening 
             <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">the Demo Room</a> in another tab.
@@ -66,15 +62,47 @@
     <script>
         let currentUserId = "";
 
+        // Dynamically shift allowed proxy options based on your strict API constraints
+        function updateProxyOptions() {
+            const apiChoice = document.getElementById('apiSelect').value;
+            const proxySelect = document.getElementById('proxySelect');
+            
+            // Clear current options
+            proxySelect.innerHTML = "";
+
+            if (apiChoice === "hyra") {
+                // For Hyra: Only allow api.allorigins
+                const opt1 = document.createElement("option");
+                opt1.value = "allorigins";
+                opt1.textContent = "api.allorigins.win (Raw Parsing Mode Wrapper)";
+                proxySelect.appendChild(opt1);
+            } else if (apiChoice === "roblox") {
+                // For Roblox: Only allow corsproxy.io or cors-anywhere
+                const opt1 = document.createElement("option");
+                opt1.value = "corsproxy";
+                opt1.textContent = "corsproxy.io (Stable URL Parameter Wrapper)";
+                proxySelect.appendChild(opt1);
+
+                const opt2 = document.createElement("option");
+                opt2.value = "corsanywhere";
+                opt2.textContent = "cors-anywhere.herokuapp.com (Requires Manual Activation)";
+                proxySelect.appendChild(opt2);
+            }
+
+            // Always provide a direct/none fallback for testing
+            const optNone = document.createElement("option");
+            optNone.value = "none";
+            optNone.textContent = "None / Direct Connection (Will fail in browser)";
+            proxySelect.appendChild(optNone);
+
+            // Update UI notices
+            toggleProxyNotice();
+        }
+
         // UI Utility: Warn user when choosing cors-anywhere
         function toggleProxyNotice() {
             const proxy = document.getElementById('proxySelect').value;
             document.getElementById('corsAnywhereNote').style.display = (proxy === 'corsanywhere') ? 'block' : 'none';
-        }
-
-        // UI Utility: Help handle any conditional API selection alterations if needed later
-        function updateProxyOptions() {
-            // Placeholder for structural API updates if expanding endpoints
         }
 
         // Generates clean source code dynamically depending on which configurations are currently checked
@@ -154,7 +182,6 @@
                 finalUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
             } else if (proxyChoice === 'corsanywhere') {
                 finalUrl = `https://cors-anywhere.herokuapp.com/${targetUrl}`;
-                // Append validation header occasionally required by cors-anywhere instance setups
                 fetchOptions.headers = { ...fetchOptions.headers, 'X-Requested-With': 'XMLHttpRequest' };
             }
 
@@ -228,6 +255,11 @@
                 setTimeout(() => { btn.textContent = "Copy Clean JS Code"; }, 2000);
             });
         }
+
+        // Initialize the proxy drop-down selections correctly on script startup
+        window.onload = function() {
+            updateProxyOptions();
+        };
     </script>
 
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roblox User ID Tester (Hyra + Stable CORS Fix)</title>
+    <title>Roblox User ID Tester (Hyra + Multi-Proxy Fix)</title>
     <style>
         body { font-family: sans-serif; margin: 2rem; max-width: 600px; }
         input, button { padding: 0.5rem; font-size: 1rem; margin-bottom: 0.5rem; border-radius: 4px; border: 1px solid #ccc; }
@@ -36,7 +36,7 @@
     <script>
         let currentUserId = "";
 
-        // Clean code snippet for backend environments
+        // Backend code snippet without proxies
         const cleanJavaScriptCode = `async function getUserID(name) {
     const targetUrl = \`https://api.hyra.io/users/roblox?username=\${encodeURIComponent(name.trim())}\`;
     const response = await fetch(targetUrl, {
@@ -50,31 +50,42 @@
     return data.id;
 }`;
 
-        // Browser function using the stable corsproxy.io wrapper
+        // Robust client-side fetch utilizing proxy fallbacks
         async function getUserID(name) {
-            // Using corsproxy.io which handles Cloudflare routing significantly better
-            const proxyUrl = 'https://corsproxy.io/?';
             const targetUrl = `https://api.hyra.io/users/roblox?username=${encodeURIComponent(name.trim())}`;
             
-            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-                method: 'GET'
-            });
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    throw new Error("User not found on Roblox.");
+            // Primary and secondary CORS proxies configured with correct parameter layouts
+            const proxyPool = [
+                `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+            ];
+
+            for (let i = 0; i < proxyPool.length; i++) {
+                try {
+                    const response = await fetch(proxyPool[i], { method: 'GET' });
+                    
+                    // Explicitly capture 404 (User doesn't exist) so we don't cycle proxies pointlessly
+                    if (response.status === 404) {
+                        throw new Error("User not found on Roblox.");
+                    }
+                    
+                    // Skip to the next proxy if a 500 error or rate limit occurs
+                    if (!response.ok) continue; 
+                    
+                    const data = await response.json();
+                    if (data && data.id) {
+                        return data.id;
+                    }
+                } catch (error) {
+                    if (error.message === "User not found on Roblox.") {
+                        throw error;
+                    }
+                    // If we've exhausted all options, throw an aggregate error
+                    if (i === proxyPool.length - 1) {
+                        throw new Error("Public CORS proxies are down or throttling requests. Try again in a moment.");
+                    }
                 }
-                throw new Error(`Proxy/API Error (Status: ${response.status}).`);
             }
-            
-            const data = await response.json();
-            
-            // Validate that the ID key exists in Hyra's straight object response
-            if (!data || !data.id) {
-                throw new Error("User data invalid or user not found.");
-            }
-            
-            return data.id;
         }
 
         async function testUser() {
